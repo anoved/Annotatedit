@@ -1,6 +1,7 @@
 #
 # Here is an intro comment block.
 # It is now two lines long.
+# (Presently, each comment line is actually treated as a separate block.)
 #
 
 package provide annotatedit 0.1
@@ -12,7 +13,7 @@ namespace eval annotatedit {
 	package require text::sync
 
 	# create the editor widgets
-	ctext .anno -wrap none -height 20 -font TkFixedFont -highlight 0 -fg "gray" 
+	ctext .anno -wrap none -height 20 -font TkFixedFont -highlight 0 -fg "blue" 
 	ctext .code -wrap none -height 20 -font TkFixedFont -highlight 0
 			
 	# put the widgets in the window
@@ -36,22 +37,48 @@ namespace eval annotatedit {
 		.code insert 1.0 $file_data
 	}
 	
-	# Search for comment lines and tag them as ANNOtations.
-	# (This assumes there was some text worth searching inserted from the CLI.)
+	# Tag styles - these (alone) are not synced between editor widgets
 	.code tag configure ANNO -background "light gray" 
-	.anno tag configure ANNO -foreground "purple"
-	variable starts {}
-	variable spans {}
+	.code tag configure CODE -background "pink"
+	.anno tag configure ANNO -background "pink"
+	.anno tag configure CODE -background "light gray"
 	
-	# actually, not using -all would prob let do the search incrementally as part of
-	# the tagging loop, which will also make it easy to compute the intervening spans to tag as CODE
-	set starts [.code search -all -count ::annotatedit::spans -regexp {^\s#.*$} 1.0]
-	
-	set annoID 0
-	foreach start $starts span $spans {
-		# confirmed: increment span to include newline; if elided, hides line.
-		.code tag add ANNO $start "$start + [incr span] indices"
-		.code tag add [format "ANNO%d" [incr annoID]] $start "$start + $span indices"
-		puts [format "$annoID: %s" [.code tag ranges "ANNO$annoID"]]
+	# testing - click text to print associated tags
+	foreach panel {.code .anno} {
+		bind $panel <ButtonPress-1> {
+			puts [%W tag names "@%x,%y"]
+		}
 	}
+	
+	# Used to locate search results
+	variable matchStart
+	variable matchSpan
+	variable searchStart 1.0
+	variable tagSetNumber 0
+	
+	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#.*$} $searchStart end]] != {}} {
+		
+		# tag anything between this comment block and previous one
+		# (or the file's start) as a code block
+		if {$searchStart ne $matchStart} {
+			.code tag add CODE $searchStart $matchStart
+			.code tag add [format "CODE%d" $tagSetNumber] $searchStart $matchStart
+		}		
+		
+		# tag this comment block
+		incr tagSetNumber
+		incr matchSpan
+		set matchEnd [.code index "$matchStart + $matchSpan indices"]
+		.code tag add ANNO $matchStart $matchEnd
+		.code tag add [format "ANNO%d" $tagSetNumber] $matchStart $matchEnd
+		
+		# look for the next comment block beginning where this one ends
+		set searchStart $matchEnd
+	}
+	
+	# finish up by tagging anything after the last comment as a code block
+	.code tag add CODE $searchStart end
+	.code tag add [format "CODE%d" $tagSetNumber] $searchStart end
+	
+	
 }
