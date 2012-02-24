@@ -2,7 +2,7 @@
 # Here is an intro comment block.
 # It is now two lines long.
 # (Presently, each comment line is actually treated as a separate block.)
-#
+# 
 
 package provide annotatedit 0.1
 namespace eval annotatedit {
@@ -63,7 +63,7 @@ namespace eval annotatedit {
 	# followed by blank lines. So, this here is a comment block. Other
 	# comment lines are ignored as "inline comments" and tagged as code.
 	#
-	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.*?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
+	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
 		
 		# tag anything between this comment block and previous one
 		# (or the file's start) as a code block
