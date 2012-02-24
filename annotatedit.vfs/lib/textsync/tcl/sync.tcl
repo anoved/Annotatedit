@@ -163,6 +163,25 @@ proc text::sync::cmd_ {W command args} {
         set return [eval [linsert $args 0 $W insert]]
       }
     }
+    tag {
+    	if {[info exists _(-tag)]} {
+	        debug 3 "  _(-tag)='$_(-tag)'\n"
+    		if {[set _(-tag)]} {
+				# -with is a list of other text widgets to sync.    		
+    			# This loop applies this command (tag) to each of those widgets.
+    			# Check $args for subcommands to suppress for custom syncing.
+    			if {![string equal "configure" [lindex $args 0]]} {
+    				foreach text $_(-with) {
+ 		   				debug 3 "  eval [linsert $args 0 $text $command]\n"
+    					eval [linsert $args 0 $text $command]
+    				}
+    			}
+    		}
+    	} else {
+    	    debug 3 "  unused command \[$command\] \[$args\]\n"
+    	}
+    	set return [eval [linsert $args 0 $W $command]]
+    }
     default {
       if { [info exists _(-$command)] } {
         debug 3 "  _(-$command)='$_(-$command)'\n"
