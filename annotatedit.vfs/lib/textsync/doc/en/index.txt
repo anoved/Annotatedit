@@ -1,0 +1,155 @@
+
+NAME
+
+    text::sync - package to synchronize two or more text widgets.
+
+
+SYNOPSIS
+
+    package require text::sync ?0.0.1?
+
+    text::sync::cget W
+    text::sync::configure W
+    text::sync::sync W ?option? ?value option value ...?
+
+    text::sync::pkginit_
+
+
+OPTIONS
+
+    Command-Line Name: -sync
+    Database Name: sync
+    Database Class: Sync
+        Specifies a list of the following option-value pairs:
+
+    -delete boolean
+        Specifies if text deletion is synchronized. The default value is
+        false.
+
+    -edit boolean
+        Specifies if text edit subcommands are synchronized. The default
+        value is false.
+
+    -insert boolean
+        Specifies if text insertion is synchronized. The default value
+        is false.
+
+    -mark boolean
+        Specifies if text marks are synchronized. The default value is
+        false.
+
+    -offset offset
+        Specifies the line offset for text insertion and deletion.
+        Offsets are specified relative to a zero offset, and are useful
+        when synchronizing a text widget which contains a subset of the
+        contents of another text widget. For instance, if text widget
+        .t1 contains a whole document, and text widget .t2 contains just
+        one section of that document, the offset for .t2 would be one
+        line less than the first line of the subsection in .t1 (because
+        text widgets start at line 1). As another example, if .t1 has
+        the offset 3, and .t2 has the offset -2, insert subcommands
+        received by .t2 would result in the text being inserted into .t1
+        5 lines below that in .t2.
+
+    -scan boolean
+        Specifies if text scan subcommands are synchronized. The default
+        value is false.
+
+    -see boolean
+        Specifies if text see subcommands are synchronized. The default
+        value is false.
+
+    -tag boolean
+        Specifies if text tags are synchronized. The default value is
+        false.
+
+    -window boolean
+        Specifies if text window subcommands are synchronized. The
+        default value is false.
+
+    -with widgets
+        Specifies the list of text widgets with which synchronization is
+        enabled.
+
+    -xview boolean
+        Specifies if horizontal scrolling is synchronized. The default
+        value is false.
+
+    -yview boolean
+        Specifies if vertical scrolling is synchronized. The default
+        value is false.
+
+
+DESCRIPTION
+
+    The text::sync package provides routines for synchronizing two or
+    more Tk text widgets.
+
+    The text::sync::sync command initiates subcommand synchronization
+    between two or more Tk text widgets.
+
+    Synchronization between text widgets can be useful in many
+    situations. For instance, a text editor can have a split view of two
+    different parts of the same document - changes to one text widget
+    are automatically applied to the other text widget. Alternatively,
+    two side-by-side text widgets can be made to scroll together
+    vertically. In essence, any of the text subcommands which affect the
+    content or visual representation of the text widget can be
+    synchronized with other text widgets.
+
+
+COMMANDS
+
+text::sync::cget W option
+
+    Returns the current value of the configuration option given by
+    option. Option may have any of the values accepted by the text
+    command, or any of the package-specific options defined in the
+    OPTIONS section above.
+
+text::sync::configure W ?option? ?value option value ...?
+
+    Query or modify the configuration options of the widget. If no
+    option is specified, returns a list describing all of the available
+    options for W (see Tk_ConfigureInfo for information on the format of
+    this list). If option is specified with no value, then the command
+    returns a list describing the one named option (this list will be
+    identical to the corresponding sublist of the value returned if no
+    option is specified). If one or more option-value pairs are
+    specified, then the command modifies the given widget option(s) to
+    have the given value(s); in this case the command returns an empty
+    string. Option may have any of the values accepted by the text
+    command, or any of the package-specific options defined in the
+    OPTIONS section above.
+
+text::sync::sync widgets ?options?
+
+    Synchronize the list of text widgets given by widgets. The list of
+    options is passed through to the test::sync::configure command.
+
+text::sync::pkginit_
+
+    This private command initializes the text::sync package.
+
+
+EXAMPLE
+
+    package require text::sync
+
+    text .t1
+    text .t2
+
+    pack .t1 .t2 -expand 1 -fill both
+
+    text::sync::sync [list .t1 .t2] \
+      -delete 1 -insert 1 -mark 1 -scan 1 -tag 1
+
+
+BUGS
+
+    Does not import values from the options database.
+
+    Needs more testing.
+
+------------------------------------------------------
+Copyright (C) 2003, Mark G. Saye <markgsaye@yahoo.com>

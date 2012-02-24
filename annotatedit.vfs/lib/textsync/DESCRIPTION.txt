@@ -1,0 +1,14 @@
+Identifier: text::sync
+Version: 0.0.1
+Title: A package that enables synchronization between two or more text
+ widgets.
+Creator: Mark G. Saye <markgsaye@yahoo.com>
+Description: Provides routines for synchronizing subcommands between
+ two or more text widgets.
+Rights: BSD
+URL: http://www.binarism.com/tk/
+Available: 2003-04-11
+Architecture: tcl
+Type: Software
+Subject: text synchronization
+Language: en

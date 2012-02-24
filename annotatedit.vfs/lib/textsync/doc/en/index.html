@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<TITLE>text::sync</TITLE>
+</HEAD>
+
+<BODY>
+
+<H3><A NAME="NAME">NAME</A></H3>
+
+<B>text::sync</B> - package to synchronize two or more text widgets.
+
+<H3><A NAME="SYNOPSIS">SYNOPSIS</A></H3>
+
+<P>
+<B>package require text::sync ?0.0.1?</B>
+</P>
+<P>
+<B>text::sync::cget</B> <I>W option</I><BR>
+<B>text::sync::configure</B> <I>W ?option? ?value option value ...?</I><BR>
+<B>text::sync::sync</B> <I>widgets ?options?</I><BR>
+</P>
+<P>
+<B>text::sync::pkginit_</B>
+</P>
+
+<H3><A NAME="OPTIONS">OPTIONS</A></H3>
+
+<DL>
+<DT>Command-Line Name: <b><a NAME="M6">-sync</a></b>
+<DT>Database Name: <b>sync</b>
+<DT>Database Class: <b>Sync</b>
+<DD>Specifies a list of the following option-value pairs:<BR><BR>
+<DL>
+<DT><B>-delete</B> <I>boolean</I>
+<DD>Specifies if text deletion is synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-edit</B>   <I>boolean</I>
+<DD>Specifies if text edit subcommands are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-insert</B> <I>boolean</I>
+<DD>Specifies if text insertion is synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-mark</B>   <I>boolean</I>
+<DD>Specifies if text marks are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-offset</B> <I>offset</I>
+<DD>Specifies the line <I>offset</I> for text insertion and deletion. Offsets are specified relative to a zero offset, and are useful when synchronizing a text widget which contains a subset of the contents of another text widget. For instance, if text widget .t1 contains a whole document, and text widget .t2 contains just one section of that document, the <I>offset</I> for .t2 would be one line less than the first line of the subsection in .t1 (because text widgets start at line 1). As another example, if .t1 has the offset 3, and .t2 has the offset -2, insert subcommands received by .t2 would result in the text being inserted into .t1 5 lines below that in .t2.<BR><BR></DD>
+
+<DT><B>-scan</B>   <I>boolean</I>
+<DD>Specifies if text scan subcommands are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-see</B>    <I>boolean</I>
+<DD>Specifies if text see subcommands are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-tag</B>    <I>boolean</I>
+<DD>Specifies if text tags are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-window</B> <I>boolean</I>
+<DD>Specifies if text window subcommands are synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-with</B>   <I>widgets</I>
+<DD>Specifies the list of text <I>widgets</I> with which synchronization is enabled.<BR><BR></DD>
+
+<DT><B>-xview</B>  <I>boolean</I>
+<DD>Specifies if horizontal scrolling is synchronized. The default value is false.<BR><BR></DD>
+
+<DT><B>-yview</B>  <I>boolean</I>
+<DD>Specifies if vertical scrolling is synchronized. The default value is false.<BR><BR></DD>
+
+</DL>
+</DL>
+
+<H3><A NAME="DESCRIPTION">DESCRIPTION</A></H3>
+
+<P>The <B>text::sync</B> package provides routines for synchronizing two or more Tk text widgets.</P>
+
+<P>The <B>text::sync::sync</B> command initiates subcommand synchronization between two or more Tk text widgets.</P>
+
+<P>Synchronization between text widgets can be useful in many situations. For instance, a text editor can have a split view of two different parts of the same document - changes to one text widget are automatically applied to the other text widget. Alternatively, two side-by-side text widgets can be made to scroll together vertically. In essence, any of the text subcommands which affect the content or visual representation of the text widget can be synchronized with other text widgets.</P>
+
+<H3><A NAME="COMMANDS">COMMANDS</A></H3>
+
+<DL>
+<DT><B>text::sync::cget</B> <I>W option</I>
+<DD>Returns the current value of the configuration option given by <I>option</I>. <I>Option</I> may have any of the values accepted by the <B>text</B> command, or any of the package-specific options defined in the <A HREF="#OPTIONS">OPTIONS</A> section above.<BR><BR>
+
+<DT><B>text::sync::configure</B> <I>W ?option? ?value option value ...?</I>
+<DD>Query or modify the configuration options of the widget. If no <I>option</I> is specified, returns a list describing all of the available options for <I>W</I> (see Tk_ConfigureInfo for information on the format of this list). If <I>option</I> is specified with no <I>value</I>, then the command returns a list describing the one named option (this list will be identical to the corresponding sublist of the value returned if no <I>option</I> is specified). If one or more <I>option-value</I> pairs are specified, then the command modifies the given widget option(s) to have the given value(s); in this case the command returns an empty string. <I>Option</I> may have any of the values accepted by the <B>text</B> command, or any of the package-specific options defined in the <A HREF="#OPTIONS">OPTIONS</A> section above.<BR><BR>
+
+<DT><B>text::sync::sync</B> <I>widgets ?options?</I>
+<DD>Synchronize the list of text widgets given by <I>widgets</I>. The list of <I>options</I> is passed through to the <B>test::sync::configure</B> command.<BR><BR>
+
+<DT><B>text::sync::pkginit_</B>
+<DD>This private command initializes the <B>text::sync</B> package.<BR><BR>
+
+</DL>
+
+<H3><A NAME="EXAMPLE">EXAMPLE</A></H3>
+
+<PRE>
+  package require text::sync
+
+  text .t1
+  text .t2
+
+  pack .t1 .t2 -expand 1 -fill both
+
+  text::sync::sync [list .t1 .t2] \
+    -delete 1 -insert 1 -mark 1 -scan 1 -tag 1
+</PRE>
+
+<H3><A NAME="BUGS">BUGS</A></H3>
+
+<P>Does not import values from the options database.</P>
+<P>Needs more testing.</P>
+
+<CENTER>
+<HR>
+<ADDRESS>Copyright (C) 2003, Mark G. Saye <A HREF="mailto:markgsaye@yahoo.com">&lt;markgsaye@yahoo.com&gt;</A></ADDRESS>
+</CENTER>
+
+</BODY>
+
+</HTML>
