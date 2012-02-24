@@ -30,4 +30,19 @@ namespace eval annotatedit {
 		
 		.code insert 1.0 $file_data
 	}
+	
+	# Search for comment lines and tag them as ANNOtations.
+	# (This assumes there was some text worth searching inserted from the CLI.)
+	# Obviously, this one-time search is only feasible as an initial test.
+	# This tagjob will be used to work out different tag styles for each editor.
+	# (text::sync syncs tags, but we need to modify to NOT sync tag configure.)
+	# Once that's sorted, we can work on tagging during insertion, updating, etc.
+	.code tag configure ANNO -underline 1
+	variable starts {}
+	variable spans {}
+	set starts [.code search -all -count ::annotatedit::spans -regexp {^\s#.*$} 1.0]
+	foreach start $starts span $spans {
+		.code tag add ANNO $start "$start + $span indices"
+	}
+	
 }
