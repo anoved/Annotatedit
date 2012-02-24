@@ -13,7 +13,7 @@ namespace eval annotatedit {
 	package require text::sync
 
 	# create the editor widgets
-	ctext .anno -wrap none -height 20 -font TkFixedFont -highlight 0 -fg "blue" 
+	ctext .anno -wrap none -height 20 -font TkFixedFont -highlight 0 -background "light gray"
 	ctext .code -wrap none -height 20 -font TkFixedFont -highlight 0
 			
 	# put the widgets in the window
@@ -38,10 +38,10 @@ namespace eval annotatedit {
 	}
 	
 	# Tag styles - these (alone) are not synced between editor widgets
-	.code tag configure ANNO -elide 1
+	.code tag configure ANNO -foreground "red"
 	.code tag configure CODE
 	.anno tag configure ANNO
-	.anno tag configure CODE -elide 1
+	.anno tag configure CODE -foreground "red"
 	
 	# testing - click text to print associated tags
 	foreach panel {.code .anno} {
@@ -56,7 +56,14 @@ namespace eval annotatedit {
 	variable searchStart 1.0
 	variable tagSetNumber 0
 	
-	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#.*$} $searchStart end]] != {}} {
+	#
+	# This new regexp pattern matches whole comment blocks,
+	# not just individual lines (as did the old pattern: {^[[:blank:]]*#.*$}).
+	# Here, comment blocks are represented as comment lines preceded and
+	# followed by blank lines. So, this here is a comment block. Other
+	# comment lines are ignored as "inline comments" and tagged as code.
+	#
+	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.*?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
 		
 		# tag anything between this comment block and previous one
 		# (or the file's start) as a code block
