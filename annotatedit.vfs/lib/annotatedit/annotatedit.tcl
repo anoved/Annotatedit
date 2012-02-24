@@ -38,10 +38,10 @@ namespace eval annotatedit {
 	}
 	
 	# Tag styles - these (alone) are not synced between editor widgets
-	.code tag configure ANNO -background "light gray" 
-	.code tag configure CODE -background "pink"
-	.anno tag configure ANNO -background "pink"
-	.anno tag configure CODE -background "light gray"
+	.code tag configure ANNO -elide 1
+	.code tag configure CODE
+	.anno tag configure ANNO
+	.anno tag configure CODE -elide 1
 	
 	# testing - click text to print associated tags
 	foreach panel {.code .anno} {
