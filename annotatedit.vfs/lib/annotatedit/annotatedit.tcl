@@ -40,7 +40,7 @@ namespace eval annotatedit {
 	# Tag styles - these (alone) are not synced between editor widgets
 	.code tag configure ANNO -foreground "red"
 	.code tag configure CODE
-	.anno tag configure ANNO
+	.anno tag configure ANNO -spacing3 16
 	.anno tag configure CODE -foreground "red"
 	
 	# testing - click text to print associated tags
