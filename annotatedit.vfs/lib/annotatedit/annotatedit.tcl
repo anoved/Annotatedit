@@ -30,19 +30,33 @@ package require text::sync
 package provide annotatedit 0.1
 namespace eval annotatedit {
 	
-	# create the text editor widgets
-	ctext .anno -wrap none -height 20 -width 50 -linemap 0 -foreground "blue"
-	ctext .code -wrap none -height 20 -width 50 -linemap 0
-			
-	# put the widgets in the window
-	pack .anno .code -expand 1 -fill both -side left
+	set f [frame .f]
 	
-	# synchronize the editor widgets
-	text::sync::sync {.anno .code} -insert 1 -delete 1 -edit 1 -tag 1 -xview 0 -yview 1
+	# create text editor widgets - one for comments and one for code
+	set font TkFixedFont
+	variable linespacing [font metrics $font -linespace]
+	set anno [ctext $f.anno -xscrollcommand [list $f.anno_xscroll set] -wrap none -height 20 -width 50 -linemap 0 -font $font -tabstyle wordprocessor]
+	set code [ctext $f.code -xscrollcommand [list $f.code_xscroll set] -yscrollcommand [list $f.yscroll set] -wrap none -height 20 -width 50 -linemap 0 -font $font -tabstyle wordprocessor]
+	
+	# each editor has its own horizontal scrollbar, but we only need one vertical
+	scrollbar $f.anno_xscroll -command [list $f.anno xview] -orient horizontal
+	scrollbar $f.code_xscroll -command [list $f.code xview] -orient horizontal
+	scrollbar $f.yscroll -command [list $f.code yview] -orient vertical
+	
+	# put widgets in their frame and pack the frame in the window
+	grid $f.anno $f.code $f.yscroll -sticky news
+	grid $f.anno_xscroll $f.code_xscroll -sticky news
+	grid rowconfigure $f 0 -weight 1
+	grid columnconfigure $f 0 -weight 1
+	grid columnconfigure $f 1 -weight 1
+	pack $f -side top -fill both -expand true
+	
+	# synchronize the editor widgets (including vertical scrolling)
+	text::sync::sync [list $anno $code] -insert 1 -delete 1 -edit 1 -tag 1 -xview 0 -yview 1
 	
 	# display whatever gets stuffed in stdin
 	set sample_text [read stdin]
-	.code insert 1.0 $sample_text
+	$code insert 1.0 $sample_text
 	
 	#
 	# Tag syncing is enabled, so that text tagged
@@ -53,8 +67,8 @@ namespace eval annotatedit {
 	# same tags in each editor.
 	#
 	# configure each editor to elide (hide) text tagged as the other type
-	.code tag configure ANNO -elide 1
-	.anno tag configure CODE -elide 1
+	$code tag configure ANNO -elide 1
+	$anno tag configure CODE -elide 1
 	
 	#
 	# Little helpers to extract the line from a
@@ -83,7 +97,7 @@ namespace eval annotatedit {
 	# preceded and followed by blank comments. Comments that aren't
 	# bordered in this way are ignored and displayed with the code.
 	#
-	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
+	while {[set matchStart [$code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
 		set codeHeight 0
 		
 		# tag anything between this comment block and the previous as code
@@ -91,14 +105,14 @@ namespace eval annotatedit {
 			
 			# marking this as code hides it from the comment editor
 			# codeHeight keeps track of the height of this block
-			.code tag add CODE $searchStart $matchStart
+			$code tag add CODE $searchStart $matchStart
 			set codeHeight [blockSpan $searchStart $matchStart]
 			
 			# highlight the first line of each code block
 			# this shows where the associated annotation applies
 			set tag [format "code-%d-top" $tagSetNumber]
-			.code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
-			.code tag configure $tag -background "light blue"
+			$code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+			$code tag configure $tag -background "light blue"
 			
 			#
 			# The general process here is tagging alternating
@@ -112,22 +126,22 @@ namespace eval annotatedit {
 			# pad the bottom of this code block, if necessary, to match comment
 			if {$annoHeight > $codeHeight} {
 				set tag [format "code-%d-bottom" $tagSetNumber]
-				.code tag add $tag [format "%d.0" [lineOfIndex [.code index "$matchStart - 1 indices"]]] $matchStart
-				.code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * 15}]
+				$code tag add $tag [format "%d.0" [lineOfIndex [$code index "$matchStart - 1 indices"]]] $matchStart
+				$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
 			}
 		}		
 		
 		# tag this comment block
 		incr tagSetNumber
 		incr matchSpan
-		set matchEnd [.code index "$matchStart + $matchSpan indices"]
-		.code tag add ANNO $matchStart $matchEnd
+		set matchEnd [$code index "$matchStart + $matchSpan indices"]
+		$code tag add ANNO $matchStart $matchEnd
 		
 		# pad the top of this comment, if necessary, to match code
 		if {$codeHeight > $annoHeight} {
 			set tag [format "anno-%d-top" $tagSetNumber]
-			.code tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
-			.anno tag configure $tag -spacing1 [expr {($codeHeight - $annoHeight) * 15}]
+			$code tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
+			$anno tag configure $tag -spacing1 [expr {($codeHeight - $annoHeight) * $linespacing}]
 		}
 
 		# annoHeight keeps track of this comment's height;
@@ -139,25 +153,26 @@ namespace eval annotatedit {
 	}
 	
 	# tag anything after the last comment as a code block
-	.code tag add CODE $searchStart end
-	set codeHeight [blockSpan $searchStart [.code index end]]
+	$code tag add CODE $searchStart end
+	set codeHeight [blockSpan $searchStart [$code index end]]
 	set tag [format "code-%d-top" $tagSetNumber]
-	.code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
-	.code tag configure $tag -background "light blue"
+	$code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+	$code tag configure $tag -background "light blue"
 
+	# Reminder: this bit doesn't play nice with an empty file.
 	
 	# finish up with one more round of padding
 	# this is actually important to facilitate syncro scrolling;
 	# if the total height of displayed text doesn't match, the
 	# editors won't line up in all cases, and users will be sad.
 	if {$codeHeight > $annoHeight} {
-		set lastAnnoLine [lineOfIndex [lindex [.code tag prevrange ANNO end] 1]]
+		set lastAnnoLine [lineOfIndex [lindex [$code tag prevrange ANNO end] 1]]
 		incr lastAnnoLine -1
-		.code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
-		.anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * 15}]
+		$code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
+		$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}]
 	} elseif {$annoHeight > $codeHeight} {
  		set tag [format "code-%d-bottom" $tagSetNumber]
- 		.code tag add $tag [.code index "end - 1 indices"]
- 		.code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * 15}]
+ 		$code tag add $tag [$code index "end - 1 indices"]
+ 		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
 	}
 }
