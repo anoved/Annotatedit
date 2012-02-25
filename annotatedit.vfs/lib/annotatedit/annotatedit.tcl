@@ -1,34 +1,38 @@
-set startcode 34
+#
+# Requirements:
+#	Tcl/Tk 8.5
+#	ctext (enhanced text widget from TKLib)
+#	text::sync (selectively sync text widgets)
+# 
+# ctext provides features like syntax coloring
+# (not yet configured) and line numbers. I have disabled
+# line numbers for now because they don't quite work
+# with the variable line spacing I use to line things up.
+# 
+# I'm using text::sync instead of the built-in
+# "peer" text widget mechanism because it provides
+# finer control of what to sync. Specifically, I
+# *don't* want to sync the styles applied to tags.
+# Spans of code and comment text are tagged in
+# both editors, but styled differently to hide them.
+#
+package require Tcl 8.5
+package require Tk 8.5
+package require ctext
+package require text::sync
 
 #
-# Here is an intro comment block.
-# It is a couple lines long.
-# More specifically, it is quite
-# a bit longer than the block of
-# code that follows. We need to make
-# sure the right block gets padded.
-# If the comment is longer, the
-# following code should be bottom-padded.
-# If the code is longer, the comment
-# should be bottom padded.
-# So why are we top-padding?
-#
-set shortcode 1
-
-#
-# here is another test
+# Eventually this will be packaged in a VFS with
+# its dependencies, such as text::sync. Wrapping
+# everything in its own namespace is good practice
+# to avoid potential conflicts with other code.
 #
 package provide annotatedit 0.1
 namespace eval annotatedit {
-
-	package require Tcl 8.5
-	package require Tk 8.5
-	package require ctext
-	package require text::sync
-
-	# create the editor widgets
-	ctext .anno -wrap none -height 20 -width 50 -font TkFixedFont -linemap 0 -foreground "blue"
-	ctext .code -wrap none -height 20 -width 50 -font TkFixedFont -linemap 0
+	
+	# create the text editor widgets
+	ctext .anno -wrap none -height 20 -width 50 -linemap 0 -foreground "blue"
+	ctext .code -wrap none -height 20 -width 50 -linemap 0
 			
 	# put the widgets in the window
 	pack .anno .code -expand 1 -fill both -side left
@@ -36,64 +40,81 @@ namespace eval annotatedit {
 	# synchronize the editor widgets
 	text::sync::sync {.anno .code} -insert 1 -delete 1 -edit 1 -tag 1 -xview 0 -yview 1
 	
-	# for sample text, insert the contents of any files specified on the command line
-	foreach arg $argv {
-		
-		if {![file exists $arg] || ![file isfile $arg]} {
-			puts "$arg is not a file"
-			continue
-		}
-		
-		set fp [open $arg r]
-	    set file_data [read $fp]
-     	close $fp
-		
-		.code insert 1.0 $file_data
-	}
+	# display whatever gets stuffed in stdin
+	set sample_text [read stdin]
+	.code insert 1.0 $sample_text
 	
-	# Tag styles - these (alone) are not synced between editor widgets
+	#
+	# Tag syncing is enabled, so that text tagged
+	# in one editor is tagged the same in the other.
+	# However, I've modified text::sync to make an
+	# exception in the case of tag configure, which
+	# allows me to apply different styles to the
+	# same tags in each editor.
+	#
+	# configure each editor to elide (hide) text tagged as the other type
 	.code tag configure ANNO -elide 1
-	.code tag configure CODE
-	.anno tag configure ANNO
 	.anno tag configure CODE -elide 1
-		
+	
+	#
+	# Little helpers to extract the line from a
+	# text index and to compute the span (height),
+	# in lines, between two indices.
+	#
 	proc lineOfIndex {textIndex} {
 		return [lindex [split $textIndex .] 0]
 	}
-	
 	proc blockSpan {startIndex endIndex} {
 		return [expr {[lineOfIndex $endIndex] - [lineOfIndex $startIndex]}]
 	}
 	
-	# Used to locate search results
+	# used to locate search results and keep track of block sizes
 	variable matchStart
 	variable matchSpan
 	variable searchStart 1.0
 	variable tagSetNumber 0
-	
-	variable span 0
-	
 	variable annoHeight 0
 	variable codeHeight 0
 	
 	#
-	# Find comment blocks (comment lines immediately preceded
-	# and followed by blank comments, like this).
+	# This loop searches the text (starting at index searchStart)
+	# for the next instance of a comment block. For now, a comment
+	# block is defined as one or more contiguous comment lines,
+	# preceded and followed by blank comments. Comments that aren't
+	# bordered in this way are ignored and displayed with the code.
 	#
 	while {[set matchStart [.code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
+		set codeHeight 0
 		
-		# tag anything between this comment block and previous one
-		# (or the file's start) as a code block
+		# tag anything between this comment block and the previous as code
 		if {$searchStart ne $matchStart} {
+			
+			# marking this as code hides it from the comment editor
+			# codeHeight keeps track of the height of this block
 			.code tag add CODE $searchStart $matchStart
-			.code tag add [format "CODE%d" $tagSetNumber] $searchStart $matchStart
+			set codeHeight [blockSpan $searchStart $matchStart]
 			
-			# length of this block in lines
-			.code tag add [format "CODE%dTOP" $tagSetNumber] $searchStart [format "%d.end" [lineOfIndex $searchStart]]
-			.code tag configure [format "CODE%dTOP" $tagSetNumber] -spacing1 [expr {$span * 15}] -background "light gray"
-			set span [blockSpan $searchStart $matchStart]
+			# highlight the first line of each code block
+			# this shows where the associated annotation applies
+			set tag [format "code-%d-top" $tagSetNumber]
+			.code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+			.code tag configure $tag -background "light blue"
 			
-			# compare this span to the previous span (from the previous comment)
+			#
+			# The general process here is tagging alternating
+			# blocks of comments and code. They come in pairs
+			# (although one may be empty, in the case of "code"
+			# between back-to-back comments, or the absent
+			# "comment" before code on the first line of a file).
+			# For every pair, I pad the height of the shorter
+			# block to make it match the height of the taller.
+			#
+			# pad the bottom of this code block, if necessary, to match comment
+			if {$annoHeight > $codeHeight} {
+				set tag [format "code-%d-bottom" $tagSetNumber]
+				.code tag add $tag [format "%d.0" [lineOfIndex [.code index "$matchStart - 1 indices"]]] $matchStart
+				.code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * 15}]
+			}
 		}		
 		
 		# tag this comment block
@@ -101,43 +122,42 @@ namespace eval annotatedit {
 		incr matchSpan
 		set matchEnd [.code index "$matchStart + $matchSpan indices"]
 		.code tag add ANNO $matchStart $matchEnd
-		.code tag add [format "ANNO%d" $tagSetNumber] $matchStart $matchEnd
 		
-# 		if commentheight > codeheight {
-# 			# pad the bottom of code
-# 		} elseif codeheight > commentheight {
-# 			# pad the bottom of comment
-# 		} else {
-# 			# shouldn't need to do anything if they match
-# 		}
-		
-		#
-		# set the top spacing of this annotation block to the span of the preceding
-		# code block. (funny - I was thinking of doing the spacing w/bottom spacing,
-		# but top spacing seems to fit more cleanly with this loop structure.
-		# only want/need to configure this padding in the anno editor
-		#
-		.code tag add [format "ANNO%dTOP" $tagSetNumber] $matchStart [format "%d.end" [lineOfIndex $matchStart]]
-		.anno tag configure [format "ANNO%dTOP" $tagSetNumber] -spacing1 [expr {$span * 15}]
-		set span [blockSpan $matchStart $matchEnd]
+		# pad the top of this comment, if necessary, to match code
+		if {$codeHeight > $annoHeight} {
+			set tag [format "anno-%d-top" $tagSetNumber]
+			.code tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
+			.anno tag configure $tag -spacing1 [expr {($codeHeight - $annoHeight) * 15}]
+		}
+
+		# annoHeight keeps track of this comment's height;
+		# next time around, compare it to the associated code
+		set annoHeight [blockSpan $matchStart $matchEnd]
 		
 		# look for the next comment block beginning where this one ends
 		set searchStart $matchEnd
 	}
 	
-	# finish up by tagging anything after the last comment as a code block
+	# tag anything after the last comment as a code block
 	.code tag add CODE $searchStart end
-	.code tag add [format "CODE%d" $tagSetNumber] $searchStart end
+	set codeHeight [blockSpan $searchStart [.code index end]]
+	set tag [format "code-%d-top" $tagSetNumber]
+	.code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+	.code tag configure $tag -background "light blue"
+
 	
-	.code tag add [format "CODE%dTOP" $tagSetNumber] $searchStart [format "%d.end" [lineOfIndex $searchStart]]
-	.code tag configure [format "CODE%dTOP" $tagSetNumber] -spacing1 [expr {$span * 15}] -background "light gray"
-	set span [blockSpan $searchStart [.code index end]]
-	
-	#
-	# Add padding after the last annotation block to make the total heights match.
-	#
-	set lastAnnoLine [lineOfIndex [lindex [.code tag prevrange ANNO end] 1]]
-	incr lastAnnoLine -1
-	.code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
-	.anno tag configure ANNOLAST  -spacing3 [expr {$span * 15}]
+	# finish up with one more round of padding
+	# this is actually important to facilitate syncro scrolling;
+	# if the total height of displayed text doesn't match, the
+	# editors won't line up in all cases, and users will be sad.
+	if {$codeHeight > $annoHeight} {
+		set lastAnnoLine [lineOfIndex [lindex [.code tag prevrange ANNO end] 1]]
+		incr lastAnnoLine -1
+		.code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
+		.anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * 15}]
+	} elseif {$annoHeight > $codeHeight} {
+ 		set tag [format "code-%d-bottom" $tagSetNumber]
+ 		.code tag add $tag [.code index "end - 1 indices"]
+ 		.code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * 15}]
+	}
 }
