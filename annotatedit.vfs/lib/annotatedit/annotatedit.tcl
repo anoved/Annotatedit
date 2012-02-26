@@ -30,8 +30,15 @@ namespace eval annotatedit {
 	# create text editor widgets - one for comments and one for code
 	set font TkFixedFont
 	variable linespacing [font metrics $font -linespace]
-	set anno [ctext $f.anno -xscrollcommand [list $f.anno_xscroll set] -wrap none -height 20 -width 50 -linemap 0 -font $font -tabstyle wordprocessor]
-	set code [ctext $f.code -xscrollcommand [list $f.code_xscroll set] -yscrollcommand [list $f.yscroll set] -wrap none -height 20 -width 50 -linemap 0 -font $font -tabstyle wordprocessor]
+	set anno [ctext $f.anno \
+			-xscrollcommand [list $f.anno_xscroll set] \
+			-wrap none -height 20 -width 50 -linemap 0 -font $font \
+			-tabstyle wordprocessor]
+	set code [ctext $f.code \
+			-xscrollcommand [list $f.code_xscroll set] \
+			-yscrollcommand [list $f.yscroll set] \
+			-wrap none -height 20 -width 50 -linemap 0 -font $font \
+			-tabstyle wordprocessor]
 	
 	# each editor has its own horizontal scrollbar, but we only need one vertical
 	scrollbar $f.anno_xscroll -command [list $f.anno xview] -orient horizontal
@@ -47,7 +54,8 @@ namespace eval annotatedit {
 	pack $f -side top -fill both -expand true
 	
 	# synchronize the editor widgets (including vertical scrolling)
-	text::sync::sync [list $anno $code] -insert 1 -delete 1 -edit 1 -tag 1 -xview 0 -yview 1
+	text::sync::sync [list $anno $code] \
+			-delete 1 -edit 1 -insert 1 -mark 1 -tag 1 -xview 0 -yview 1
 	
 	# display whatever gets stuffed in stdin
 	set sample_text [read stdin]
@@ -84,7 +92,9 @@ namespace eval annotatedit {
 	# preceded and followed by blank comments. Comments that aren't
 	# bordered in this way are ignored and displayed with the code.
 	#
-	while {[set matchStart [$code search -forward -count ::annotatedit::matchSpan -regexp -- {^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]] != {}} {
+	while {{} != [set matchStart [$code search \
+			-forward -count ::annotatedit::matchSpan -regexp -- \
+			{^[[:blank:]]*#\n(?:[[:blank:]]*#.+?\n)+[[:blank:]]*#$} $searchStart end]]} {
 		set codeHeight 0
 		
 		# tag anything between this comment block and the previous as code
