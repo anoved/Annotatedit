@@ -16,17 +16,12 @@
 # Spans of code and comment text are tagged in
 # both editors, but styled differently to hide them.
 #
+
 package require Tcl 8.5
 package require Tk 8.5
 package require ctext
 package require text::sync
 
-#
-# Eventually this will be packaged in a VFS with
-# its dependencies, such as text::sync. Wrapping
-# everything in its own namespace is good practice
-# to avoid potential conflicts with other code.
-#
 package provide annotatedit 0.1
 namespace eval annotatedit {
 	
@@ -57,15 +52,7 @@ namespace eval annotatedit {
 	# display whatever gets stuffed in stdin
 	set sample_text [read stdin]
 	$code insert 1.0 $sample_text
-	
-	#
-	# Tag syncing is enabled, so that text tagged
-	# in one editor is tagged the same in the other.
-	# However, I've modified text::sync to make an
-	# exception in the case of tag configure, which
-	# allows me to apply different styles to the
-	# same tags in each editor.
-	#
+
 	# configure each editor to elide (hide) text tagged as the other type
 	$code tag configure ANNO -elide 1
 	$anno tag configure CODE -elide 1
@@ -111,7 +98,7 @@ namespace eval annotatedit {
 			# highlight the first line of each code block
 			# this shows where the associated annotation applies
 			set tag [format "code-%d-top" $tagSetNumber]
-			$code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+			$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
 			$code tag configure $tag -background "light blue"
 			
 			#
@@ -156,10 +143,12 @@ namespace eval annotatedit {
 	$code tag add CODE $searchStart end
 	set codeHeight [blockSpan $searchStart [$code index end]]
 	set tag [format "code-%d-top" $tagSetNumber]
-	$code tag add $tag $searchStart [format "%d.end" [lineOfIndex $searchStart]]
+	$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
 	$code tag configure $tag -background "light blue"
 
+	#
 	# Reminder: this bit doesn't play nice with an empty file.
+	#
 	
 	# finish up with one more round of padding
 	# this is actually important to facilitate syncro scrolling;
