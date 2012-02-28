@@ -27,7 +27,7 @@ namespace eval annotatedit {
 
 #
 # SetupEditor
-#
+# 
 # This procedure creates the editor interface.
 # The return value is a two-item list; the first
 # item is the annotation editor widget and the second
@@ -69,7 +69,6 @@ proc SetupEditor {} {
 	text::sync::sync [list $anno $code] \
 			-delete 1 -edit 1 -insert 1 -mark 1 -tag 1 -xview 0 -yview 1
 
-
 	# configure each editor to elide (hide) text tagged as the other type
 	$code tag configure ANNO -elide 1
 	$anno tag configure CODE -elide 1
@@ -80,7 +79,7 @@ proc SetupEditor {} {
 
 #
 # LoadCode
-#
+# 
 # Parameters:
 #	code, the code editor widget
 #
@@ -140,7 +139,7 @@ proc FormatText {anno code} {
 			# this shows where the associated annotation applies
 			set tag [format "code-%d-top" $tagSetNumber]
 			$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
-			$code tag configure $tag -background "light blue"
+			$code tag configure $tag -background "light blue" -spacing1 $linespacing
 			
 			#
 			# The general process here is tagging alternating
@@ -155,7 +154,7 @@ proc FormatText {anno code} {
 			if {$annoHeight > $codeHeight} {
 				set tag [format "code-%d-bottom" $tagSetNumber]
 				$code tag add $tag [format "%d.0" [lineOfIndex [$code index "$matchStart - 1 indices"]]] $matchStart
-				$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
+				$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}] -background "light blue"
 			}
 		}		
 		
@@ -164,12 +163,18 @@ proc FormatText {anno code} {
 		incr matchSpan
 		set matchEnd [$code index "$matchStart + $matchSpan indices"]
 		$code tag add ANNO $matchStart $matchEnd
+	
+		# tag first line of block, with standard extra spacing
+		set tag [format "anno-%d-top" $tagSetNumber]
+		#$anno tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
+		$anno tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end + 1 indices" [lineOfIndex $matchStart]]
+		$anno tag configure $tag -background "light blue"
 		
 		# pad the top of this comment, if necessary, to match code
 		if {$codeHeight > $annoHeight} {
-			set tag [format "anno-%d-top" $tagSetNumber]
-			$code tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
-			$anno tag configure $tag -spacing1 [expr {($codeHeight - $annoHeight) * $linespacing}]
+			$anno tag configure $tag -spacing1 [expr {$linespacing + (($codeHeight - $annoHeight) * $linespacing)}]
+		} else {
+			$anno tag configure $tag -spacing1 $linespacing
 		}
 	
 		# annoHeight keeps track of this comment's height;
@@ -185,7 +190,7 @@ proc FormatText {anno code} {
 	set codeHeight [blockSpan $searchStart [$code index end]]
 	set tag [format "code-%d-top" $tagSetNumber]
 	$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
-	$code tag configure $tag -background "light blue"
+	$code tag configure $tag -background "light blue" -spacing1 $linespacing
 	
 	#
 	# Reminder: this bit doesn't play nice with an empty file.
@@ -199,19 +204,19 @@ proc FormatText {anno code} {
 		set lastAnnoLine [lineOfIndex [lindex [$code tag prevrange ANNO end] 1]]
 		incr lastAnnoLine -1
 		$code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
-		$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}]
+		$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}] -background "light blue"
 	} elseif {$annoHeight > $codeHeight} {
 		set tag [format "code-%d-bottom" $tagSetNumber]
 		$code tag add $tag [$code index "end - 1 indices"]
-		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
+		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}] -background "light blue"
 	}
 
 }
 
-	set widgets [SetupEditor]
-	set anno [lindex $widgets 0]
-	set code [lindex $widgets 1]
-	LoadCode $code
-	FormatText $anno $code
+set widgets [SetupEditor]
+set anno [lindex $widgets 0]
+set code [lindex $widgets 1]
+LoadCode $code
+FormatText $anno $code
 
 }
