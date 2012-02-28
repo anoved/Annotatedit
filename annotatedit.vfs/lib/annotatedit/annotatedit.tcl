@@ -24,7 +24,19 @@ package require text::sync
 
 package provide annotatedit 0.1
 namespace eval annotatedit {
-	
+
+#
+# SetupEditor
+#
+# This procedure creates the editor interface.
+# The return value is a two-item list; the first
+# item is the annotation editor widget and the second
+# item is the code editor widget. Both are synced, so
+# text edit operations may be applied to either widget.
+# Tag styles, however, are not synced.
+#
+proc SetupEditor {} {
+
 	set f [frame .f]
 	
 	# create text editor widgets - one for comments and one for code
@@ -56,28 +68,47 @@ namespace eval annotatedit {
 	# synchronize the editor widgets (including vertical scrolling)
 	text::sync::sync [list $anno $code] \
 			-delete 1 -edit 1 -insert 1 -mark 1 -tag 1 -xview 0 -yview 1
-	
-	# display whatever gets stuffed in stdin
-	set sample_text [read stdin]
-	$code insert 1.0 $sample_text
+
 
 	# configure each editor to elide (hide) text tagged as the other type
 	$code tag configure ANNO -elide 1
 	$anno tag configure CODE -elide 1
+		
+	return [list $anno $code]
+}
+
+
+#
+# LoadCode
+#
+# Parameters:
+#	code, the code editor widget
+#
+proc LoadCode {code} {
+ 
+	# display whatever gets stuffed in stdin
+	set sample_text [read stdin]
+	$code insert end $sample_text
 	
-	#
-	# Little helpers to extract the line from a
-	# text index and to compute the span (height),
-	# in lines, between two indices.
-	#
-	proc lineOfIndex {textIndex} {
-		return [lindex [split $textIndex .] 0]
-	}
-	proc blockSpan {startIndex endIndex} {
-		return [expr {[lineOfIndex $endIndex] - [lineOfIndex $startIndex]}]
-	}
-	
+}
+
+#
+# Little helpers to extract the line from a
+# text index and to compute the span (height),
+# in lines, between two indices.
+#
+proc lineOfIndex {textIndex} {
+	return [lindex [split $textIndex .] 0]
+}
+
+proc blockSpan {startIndex endIndex} {
+	return [expr {[lineOfIndex $endIndex] - [lineOfIndex $startIndex]}]
+}
+
+proc FormatText {anno code} {
+
 	# used to locate search results and keep track of block sizes
+	variable linespacing
 	variable matchStart
 	variable matchSpan
 	variable searchStart 1.0
@@ -140,7 +171,7 @@ namespace eval annotatedit {
 			$code tag add $tag [format "%d.0" [lineOfIndex $matchStart]] [format "%d.end" [lineOfIndex $matchStart]]
 			$anno tag configure $tag -spacing1 [expr {($codeHeight - $annoHeight) * $linespacing}]
 		}
-
+	
 		# annoHeight keeps track of this comment's height;
 		# next time around, compare it to the associated code
 		set annoHeight [blockSpan $matchStart $matchEnd]
@@ -155,7 +186,7 @@ namespace eval annotatedit {
 	set tag [format "code-%d-top" $tagSetNumber]
 	$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
 	$code tag configure $tag -background "light blue"
-
+	
 	#
 	# Reminder: this bit doesn't play nice with an empty file.
 	#
@@ -170,8 +201,17 @@ namespace eval annotatedit {
 		$code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
 		$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}]
 	} elseif {$annoHeight > $codeHeight} {
- 		set tag [format "code-%d-bottom" $tagSetNumber]
- 		$code tag add $tag [$code index "end - 1 indices"]
- 		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
+		set tag [format "code-%d-bottom" $tagSetNumber]
+		$code tag add $tag [$code index "end - 1 indices"]
+		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}]
 	}
+
+}
+
+	set widgets [SetupEditor]
+	set anno [lindex $widgets 0]
+	set code [lindex $widgets 1]
+	LoadCode $code
+	FormatText $anno $code
+
 }
