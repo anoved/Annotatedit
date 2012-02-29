@@ -185,30 +185,33 @@ proc FormatText {anno code} {
 		set searchStart $matchEnd
 	}
 	
-	# tag anything after the last comment as a code block
+	# tag anything after the last comment (if any) as a code block
 	$code tag add CODE $searchStart end
-	set codeHeight [blockSpan $searchStart [$code index end]]
-	set tag [format "code-%d-top" $tagSetNumber]
-	$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
-	$code tag configure $tag -background "light blue" -spacing1 $linespacing
 	
-	#
-	# Reminder: this bit doesn't play nice with an empty file.
-	#
-	
-	# finish up with one more round of padding
-	# this is actually important to facilitate syncro scrolling;
-	# if the total height of displayed text doesn't match, the
-	# editors won't line up in all cases, and users will be sad.
-	if {$codeHeight > $annoHeight} {
-		set lastAnnoLine [lineOfIndex [lindex [$code tag prevrange ANNO end] 1]]
-		incr lastAnnoLine -1
-		$code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
-		$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}] -background "light blue"
-	} elseif {$annoHeight > $codeHeight} {
-		set tag [format "code-%d-bottom" $tagSetNumber]
-		$code tag add $tag [$code index "end - 1 indices"]
-		$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}] -background "light blue"
+	# only need to bother performing final block highlight and padding
+	# if there were any comment-code block pairs to begin with.
+	if {0 != $tagSetNumber} {
+		
+		set codeHeight [blockSpan $searchStart [$code index end]]
+		set tag [format "code-%d-top" $tagSetNumber]
+		$code tag add $tag $searchStart [format "%d.end + 1 indices" [lineOfIndex $searchStart]]
+		$code tag configure $tag -background "light blue" -spacing1 $linespacing
+		
+		# finish up with one more round of padding
+		# this is actually important to facilitate syncro scrolling;
+		# if the total height of displayed text doesn't match, the
+		# editors won't line up in all cases, and users will be sad.
+		if {$codeHeight > $annoHeight} {
+			set lastAnnoLine [lineOfIndex [lindex [$code tag prevrange ANNO end] 1]]
+			incr lastAnnoLine -1
+			$code tag add ANNOLAST [format "%d.0" $lastAnnoLine] [format "%d.end" $lastAnnoLine]
+			$anno tag configure ANNOLAST  -spacing3 [expr {($codeHeight - $annoHeight) * $linespacing}] -background "light blue"
+		} elseif {$annoHeight > $codeHeight} {
+			set tag [format "code-%d-bottom" $tagSetNumber]
+			$code tag add $tag [$code index "end - 1 indices"]
+			$code tag configure $tag -spacing3 [expr {($annoHeight - $codeHeight) * $linespacing}] -background "light blue"
+		}
+
 	}
 
 }
