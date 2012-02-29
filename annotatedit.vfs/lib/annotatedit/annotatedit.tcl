@@ -42,14 +42,14 @@ proc SetupEditor {} {
 	# create text editor widgets - one for comments and one for code
 	set font TkFixedFont
 	variable linespacing [font metrics $font -linespace]
-	set anno [ctext $f.anno \
+	set anno [text $f.anno \
 			-xscrollcommand [list $f.anno_xscroll set] \
-			-wrap none -height 20 -width 50 -linemap 0 -font $font \
+			-wrap none -height 20 -width 50 -font $font \
 			-tabstyle wordprocessor]
-	set code [ctext $f.code \
+	set code [text $f.code \
 			-xscrollcommand [list $f.code_xscroll set] \
 			-yscrollcommand [list $f.yscroll set] \
-			-wrap none -height 20 -width 50 -linemap 0 -font $font \
+			-wrap none -height 20 -width 50 -font $font \
 			-tabstyle wordprocessor]
 	
 	# each editor has its own horizontal scrollbar, but we only need one vertical
@@ -68,7 +68,16 @@ proc SetupEditor {} {
 	# synchronize the editor widgets (including vertical scrolling)
 	text::sync::sync [list $anno $code] \
 			-delete 1 -edit 1 -insert 1 -mark 1 -tag 1 -xview 0 -yview 1
+	
+	bind $code <Button-1> {
+		puts [%W tag names @%x,%y]
+	}
 
+	bind $anno <Button-1> {
+		puts [%W tag names @%x,%y]
+	}
+
+	
 	# configure each editor to elide (hide) text tagged as the other type
 	$code tag configure ANNO -elide 1
 	$anno tag configure CODE -elide 1
@@ -105,11 +114,11 @@ proc blockSpan {startIndex endIndex} {
 }
 
 proc FormatText {anno code} {
-
+	
 	# used to locate search results and keep track of block sizes
 	variable linespacing
-	variable matchStart
-	variable matchSpan
+	variable matchStart {}
+	variable matchSpan {}
 	variable searchStart 1.0
 	variable tagSetNumber 0
 	variable annoHeight 0
