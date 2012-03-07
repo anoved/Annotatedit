@@ -8,8 +8,10 @@ The main code file is `annotatedit.vfs/lib/annotatedit/annotated.tcl`. Run with 
 Status
 ------
 
-Not yet interactive. Displays text read from `stdin` on startup and applies formatting once. Next major task is to maintaining code/comment tagging and formatting during editing. Other tasks include formatting (the annotations don't need to be displayed with indentation, although it should be retained in the code) and logical behavior for starting/splitting/deleting blocks (eg, switching input focus to the appropriate pane).
+Performs a single formatting pass when text is loaded. This consists of iteratively searching the text for comment blocks, tagging them as such, and also tagging certain lines at code/comment block boundaries. `-spacing` and `-elide` text widget styles are manipulated for these tags to yield the desired appearance.
 
-Here's a rough screenshot. The highlights in the code indicate where the adjacent blue comment blocks actually reside.
+Formatting is lost when the text is edited. The single-pass formatting needs to be retooled to work like syntax highlighting, so that it is updated in response to edit events.
 
-![Sample screenshot](https://github.com/anoved/Annotatedit/raw/master/Screenshots/4.png)
+Here's a screenshot. Extended comment blocks are displayed adjacent to the following code. As an aid to debugging and to visualize how alignment is achieved, areas with modified linespacing are highlighted in blue.
+
+![Sample screenshot](https://github.com/anoved/Annotatedit/raw/master/Screenshots/5.png)
